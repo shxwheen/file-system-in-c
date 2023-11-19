@@ -1,26 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <ctype.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <string.h>
-#define MAX 1024 // max limit of Inodes
-
-
-typedef struct
-{
-    uint32_t inode;
-    uint32_t parentInode;
-    char type;
-    char name[32];
-} Inode;
-
-
-
-
-
+#include "read_inodes.h"
 
 void *checked_malloc(int len)
 {
@@ -38,21 +16,15 @@ char *uint32_to_str(uint32_t i)
 {
     // pretend to print to a string to get length
     int length = snprintf(NULL, 0, "%lu", (unsigned long)i);
-
-
     // allocate space for the actual string
     char* str = (char *)checked_malloc(length + 1);
-
-
     // print to string
     snprintf(str, length + 1, "%lu", (unsigned long)i);
-
-
     return str;
 }
 
 
-void loadInode(uint32_t inode, Inode *iNodeList, char type, int total) 
+void loadInode(uint32_t inode, Inode *iNodeList, char type, int index) 
 // send in pointer to first structure, go thru files that aren't directories, extract names, maybe open all dirs
 // figure out how to keep track of name and parent
 // for loop or if statement to update
@@ -80,14 +52,28 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int total)
     //char type = '\0';
     char prev = '\0';
     char curr = '\0';
+    // flag for in/out of directory
+    int inDir = 0;
+    // count for "."
+    //helps w parent tracking
+    int dots = 0;
+
     while (fread(&character, sizeof(char), 1, file) == 1)
     {
+        // if "." then add to the dot counter
+        // this counter will help keep track of Parent Inodes
+        if(character == 46){
+            // update "." count
+            dots++;
+        }
         if(char_count == 1)
         {
             prev = character;
             if(type == 'd')
             {
                 printf("This is a directory! %c\n", character);
+                //flag for in directory
+                inDir = 1;
             }
             else
             {
@@ -102,6 +88,11 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int total)
                 if(!isprint(curr) && curr != 46)
                 {
                     printf("INODE num: %d\n", character);
+                    if(dots > 2){
+                        // parent assigned value
+                        (iNodeList)[character].parentInode = index;
+                    }
+
                 }
                 else
                 {
@@ -213,8 +204,9 @@ void loadInodesList(char *filename, Inode *iNodeList, size_t *iNodeCount)
 
     for(size_t i = 0; i < index; i++)
     {
+        
         printf("NEW INODE: %d\n", inodeNumList[i]);
-        loadInode(inodeNumList[i], (&iNodeList)[i], typeList[i], index);
+        loadInode(inodeNumList[i], iNodeList, typeList[i], i);
         printf("%c", '\n');
     }
 
@@ -233,75 +225,6 @@ void loadInodesList(char *filename, Inode *iNodeList, size_t *iNodeCount)
    
 // }
 
-
-// void changeDirectory(const char* name){
-
-
-// }
-// // can i make inodeNumList and inode count global variables?
-// void listContents(uint32_t currentInode)
-// {
-//  for(int i=0; i< inodeCount;i++){
-//      if(iNodeList[i].parentInode == currentInode){
-//          printf("%u %s\n",iNodeList[i].inode,iNodeList[i].name);
-//      }
-//  }
-//  }
-
-
-
-
-    // traverse thru inodeslsit array
-    // identify which inode has teh current inode as its
-    // parent and print the names of the inodes that have the current inode as its parent
-    // print name and inode
-    // for(int i = 0; i < sizeof(inode); i++){  
-    //  // print parent nodes
-    //  printf(" ", inodeNumList[i].parentINode);
-
-
-    // }
-
-
-
-
-
-
-// void createDirectory(const char *name){
-
-
-//  // iterate thru inodeList to see if name of directory exiss, if yes, exit
-//  // check if inode count is 1024
-//  // create i node with new inodeCount and set parentInode, type, and also name
-//  // create file with its name as inode number
-//  // write into this file its . and .. inode values
-
-
-
-
-// }
-
-
-// void createFile(const char *name){
-
-
-// }
-// int main(void)
-// {
-
-
-
-
-// // Read inodes_list file and load fs data
-// loadInodesList("inodes_list");
-// return 0;
-// }
-
-
-
-
-
-
 int main(int argc, char* argv[]){
     // incorrect arg count
     // if(argc != 2){
@@ -315,7 +238,7 @@ int main(int argc, char* argv[]){
         printf("invalid directory\n");
         exit(1);
     }
-    Inode dummy = {-1,-2,'\0',"dummy"};
+    Inode dummy = {-1,0,'\0',"dummy"};
     Inode iNodeList[1024] = {dummy}; // pointer to this in params
     size_t inodeCount = 0;
     uint32_t currentInode = 0;
@@ -332,13 +255,13 @@ int main(int argc, char* argv[]){
 
 
     chdir(argv[1]);
+    closedir(directory);
     //new array, initialize vals
 
 
     //DIR *directory;
     //directory = opendir(argv[1]);
     // make an if else for if it is null
-
 
     //pointers to vals
     // Inode *list = iNodeList;
@@ -348,62 +271,50 @@ int main(int argc, char* argv[]){
     // load inodes into list
     // maybe update load inode list
     loadInodesList("inodes_list", iNodeList, &inodeCount);
-    printf("%d\n", inodeCount);
+    printf("Inode Count: %zu\n", inodeCount);
     for(int i =0; i<inodeCount;i++){
-        printf("%d %c\n",iNodeList[i].inode,iNodeList[i].type);
+        printf("Inode: %d, Type: %c, Parent: %d \n",iNodeList[i].inode,iNodeList[i].type, iNodeList[i].parentInode);
     }
 
 
-
-
-
-
-    // maybe add if else if dir doesn't exist
-
-
-
-
     char fname[50];
-    // while(1){
-    //  //Inode inodeArrayList[1024] = {0};
-    //  //int current_inode = 0;
-    //  //prompting user for input
-    //  printf("> ");
-    //  fgets(fname,sizeof(fname), stdin);
-    //  char* command = strtok(fname, " \n");
-    //  if(command == NULL){
-    //      continue;
-    //  }
-    //  if(strcmp(command, "ls") == 0){
-    //      //printf("hello\n");
-    //      listContents(currentInode);
+    while(1){
+     printf("> ");
+     fgets(fname,sizeof(fname), stdin);
+     char* command = strtok(fname, " \n");
+     if(command == NULL){
+         continue;
+     }
+     if(strcmp(command, "ls") == 0){
+         //printf("hello\n");
+         listContents(currentInode,iNodeList,inodeCount);
+
+     } else if(strcmp(command, "exit") == 0){
+         break;
+         exit(1);
+     }
+         else if(strcmp(command,"cd") == 0){
+         char *dir = strtok(NULL, " \n");
+         if(dir != NULL){
+             // cd logic
+         }
+     } else if(strcmp(command, "mkdir") == 0){
+         char *dir = strtok(NULL," \n");
+         if(dir != NULL){
+             // mkdir logic
+         }
+     } else if(strcmp(command, "touch") == 0){
+         char *filename = strtok(NULL, " \n");
+         if(filename != NULL){
 
 
-    //  } //else if(strcmp(command, "exit") == 0){
-    //      break;
-    //      //exit(1);
-    //  } else if(strcmp(command,"cd") == 0){
-    //      char *dir = strtok(NULL, " \n");
-    //      if(dir != NULL){
-    //          // cd logic
-    //      }
-    //  } else if(strcmp(command, "mkdir") == 0){
-    //      char *dir = strtok(NULL," \n");
-    //      if(dir != NULL){
-    //          // mkdir logic
-    //      }
-    //  } else if(strcmp(command, "touch") == 0){
-    //      char *filename = strtok(NULL, " \n");
-    //      if(filename != NULL){
+         }
+     } else {
+         printf("unknown commands\n");
+     }
 
 
-    //      }
-    //  } else {
-    //      printf("unknown commands\n");
-    //  }
-
-
-    // }
+    }
 
 
 
