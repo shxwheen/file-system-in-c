@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string.h>
-#define MAX 1024 // max limit of Inodes
 
 typedef struct
 {
@@ -18,9 +17,8 @@ typedef struct
 
 void listContents(uint32_t currentInode, Inode *iNodeList, int iNodeCount);
 void changeDirectory(const char* name, size_t iNodeCount, Inode *iNodeList, uint32_t *currentInode);
-void createDirectory(const char *name);
-void createFile(const char *name);
-
+void createDirectory(const char* name, size_t *iNodeCount, Inode *iNodeList, uint32_t currentInode);
+void createFile(const char *name, size_t *iNodeCount, Inode *iNodeList, uint32_t currentInode);
 
 
 

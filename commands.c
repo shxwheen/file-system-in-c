@@ -16,6 +16,7 @@ void changeDirectory(const char* name, size_t iNodeCount, Inode *iNodeList, uint
 
 // if dir doesn't exits
 printf("epic fail, dir not found\n"); 
+//return;
     
 }
 
@@ -47,22 +48,115 @@ void listContents(uint32_t currentInode, Inode *iNodeList, int iNodeCount) {
     }
 }
 
-void createDirectory(const char *name){
+
+void createDirectory(const char* name, size_t *iNodeCount, Inode *iNodeList, uint32_t currentInode) {
+    // error catching 
+
+    // check if there is space for inode
+    // check capacity which 1024
+    if (*iNodeCount >= 1024) {
+        printf("Inode limit reached. Cannot create new dir.\n");
+        return;
+    }
+
+    // use for loop to check if directory name exists
+    for (size_t i = 0; i < *iNodeCount; i++) {
+        if (strcmp(iNodeList[i].name, name) == 0) {
+            printf("dir %s already exists.\n", name);
+            return;
+        }
+    }
 
 
- // iterate thru inodeList to see if name of directory exiss, if yes, exit
- // check if inode count is 1024
- // create i node with new inodeCount and set parentInode, type, and also name
- // create file with its name as inode number
- // write into this file its . and .. inode values
+    // create new inode for the directory
+    // assume next inode number is the current count
+    uint32_t newInode = *iNodeCount; 
+     // access inode in list and set to dir type
+    iNodeList[*iNodeCount].type = 'd';
+    // access inode in list and set inode num
+    iNodeList[*iNodeCount].inode = newInode;
+    // assigns dir name to respected inode in inode array
+    // subtract 1 to make space for null terminator in array
+    strncpy(iNodeList[*iNodeCount].name, name, sizeof(iNodeList[*iNodeCount].name) - 1);
+    // access inode in list and set parent
+    iNodeList[*iNodeCount].parentInode = currentInode;
+   
+    // increment for next use
+    (*iNodeCount)++;
 
+    // storing name here
+    char filename[32];
+    // converts newInode to string and stores in filename
+    sprintf(filename, "%u", newInode); 
+    // open file
+    FILE *file = fopen(filename, "w");
+    // error catching
+    if (file == NULL) {
+        printf("Error creating dir file");
+        return;
+    }
 
-
-
+    // write "." and ".." inode values into the file
+    fprintf(file, ". %u\n.. %u\n", newInode, iNodeList[newInode].parentInode);
+    // close file
+    fclose(file);
+    // GREAT SUCCESSSSS!!!!!!
+    printf("Directory %s created.\n", name);
 }
 
 
-void createFile(const char *name){
+// literally same as create directory function except adjusted for file
+void createFile(const char *name, size_t *iNodeCount, Inode *iNodeList, uint32_t currentInode){
+    // error catching 
 
+    // check if there is space for inode
+    // check capacity which 1024
+    if (*iNodeCount >= 1024) {
+        printf("Inode limit reached. Cannot create new file.\n");
+        return;
+    }
+
+    // use for loop to check if directory name exists
+    for (size_t i = 0; i < *iNodeCount; i++) {
+        if (strcmp(iNodeList[i].name, name) == 0) {
+            printf("file %s already exists.\n", name);
+            return;
+        }
+    }
+
+
+    // create new inode for the file
+    // assume next inode number is the current count
+    uint32_t newInode = *iNodeCount; 
+     // access inode in list and set to file type
+    iNodeList[*iNodeCount].type = 'f';
+    // access inode in list and set inode num
+    iNodeList[*iNodeCount].inode = newInode;
+    // assigns file name to respected inode in inode array
+    // subtract 1 to make space for null terminator in array
+    strncpy(iNodeList[*iNodeCount].name, name, sizeof(iNodeList[*iNodeCount].name) - 1);
+    // access inode in list and set parent
+    iNodeList[*iNodeCount].parentInode = currentInode;
+   
+    // increment for next use
+    (*iNodeCount)++; 
+    // storing name here
+    char filename[32];
+    // converts newInode # to string and stores in filename
+    sprintf(filename, "%u", newInode); 
+    // open file
+    FILE *file = fopen(filename, "w");
+    // error catching
+    if (file == NULL) {
+        printf("Error creating directory file");
+        return;
+    }
+
+    // write "." and ".." inode values into the file
+    fprintf(file, ". %u\n.. %u\n", newInode, iNodeList[newInode].parentInode);
+    // close file
+    fclose(file);
+    // GREAT SUCCESSSSS!!!!!!
+    printf("file %s created.\n", name);
 
 }

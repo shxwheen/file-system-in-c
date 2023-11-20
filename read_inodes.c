@@ -25,9 +25,7 @@ char *uint32_to_str(uint32_t i)
 
 
 void loadInode(uint32_t inode, Inode *iNodeList, char type, int index) 
-// send in pointer to first structure, go thru files that aren't directories, extract names, maybe open all dirs
-// figure out how to keep track of name and parent thru directories 
-// for loop or if statement to update
+
 {
     char *filename = uint32_to_str(inode);
     FILE *file;
@@ -35,7 +33,8 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int index)
 
 
     // Open the binary file in read mode
-    file = fopen(filename, "rb"); // "rb" stands for read binary
+    // "rb" stands for read binary
+    file = fopen(filename, "rb"); 
 
 
     // Check if the file was opened successfully
@@ -284,18 +283,30 @@ void loadInodesList(char *filename, Inode *iNodeList, size_t *iNodeCount)
 }
 
 
-// void saveInodeList(const char *path){
-   
-// }
+void saveInodeList(const char *path, Inode *iNodeList, size_t iNodeCount){
+    FILE *file = fopen(path,"w");
+    // error catch
+    if(file == NULL){
+        printf("ERROR!!!!! inode list file is not valid");
+        return;   
+    }
+    // update inode list with correct information with fprintf
+    for(size_t i = 0; i<iNodeCount;i++){
+        fprintf(file, "%u %u %c %s\n",iNodeList[i].inode,iNodeList[i].parentInode,iNodeList[i].type,iNodeList[i].name);
+    }
+    // close
+    fclose(file);
+}
+
 
 int main(int argc, char* argv[]){
-    // incorrect arg count
-    // if(argc != 2){
-    //  printf("no directory given");
-    //  return 1;
-    // }
+    // incorrect arg count (no dir given as input)
+    if(argc != 2){
+     printf("no directory given try again\n");
+     return 1;
+    }
 
-
+    /// invalid dir name
     DIR *directory = opendir(argv[1]);
     if(directory == NULL){
         printf("invalid directory\n");
@@ -315,6 +326,7 @@ int main(int argc, char* argv[]){
 
     // load inodes into list
     loadInodesList("inodes_list", iNodeList, &inodeCount);
+    // inode count
     printf("Inode Count: %zu\n", inodeCount);
     // for loop to print info
     for(int i =0; i<inodeCount;i++){
@@ -322,6 +334,7 @@ int main(int argc, char* argv[]){
     }
 
     // commands 
+    // use strtok to tokenize arguments so i can access whatever comes after the commands
     char fname[50];
     while(1){
      printf("> ");
@@ -341,17 +354,23 @@ int main(int argc, char* argv[]){
          else if(strcmp(command,"cd") == 0){
          char *dir = strtok(NULL, " \n");
          if(dir != NULL){
-             // cd logic
+             // cd 
              changeDirectory(dir, inodeCount,iNodeList, &currentInode);
          }
      } else if(strcmp(command, "mkdir") == 0){
          char *dir = strtok(NULL," \n");
          if(dir != NULL){
-             // mkdir logic
+             // mkdir 
+             createDirectory(dir,&inodeCount,iNodeList,currentInode);
+             saveInodeList("inodes_list",iNodeList,inodeCount);
          }
      } else if(strcmp(command, "touch") == 0){
          char *filename = strtok(NULL, " \n");
          if(filename != NULL){
+            // create file (touch)
+            createFile(filename,&inodeCount,iNodeList,currentInode);
+            saveInodeList("inodes_list",iNodeList,inodeCount);
+
 
 
          }
