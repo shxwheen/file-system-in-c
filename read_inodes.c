@@ -26,7 +26,7 @@ char *uint32_to_str(uint32_t i)
 
 void loadInode(uint32_t inode, Inode *iNodeList, char type, int index) 
 // send in pointer to first structure, go thru files that aren't directories, extract names, maybe open all dirs
-// figure out how to keep track of name and parent
+// figure out how to keep track of name and parent thru directories 
 // for loop or if statement to update
 {
     char *filename = uint32_to_str(inode);
@@ -48,16 +48,29 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int index)
 
     // Read characters from the file and print them as characters
     int char_count = 1;
+
     //uint32_t inode = 0;
     //char type = '\0';
+
     char prev = '\0';
     char curr = '\0';
+
     // flag for in/out of directory
     int inDir = 0;
+
     // count for "."
     //helps w parent tracking
     int dots = 0;
+    //char nameBuffer[32];
 
+    // index used for storing inodes to respected name
+    int nameIndex = 0;
+    // index for inode being iterated thru in the array of Inodes
+    int nodeIdx = 0;
+    // used for counting chars in the name, this helps with bypassing the dots that so that we can access directory
+    int nameCount = 0;
+
+    // read from file characher by character
     while (fread(&character, sizeof(char), 1, file) == 1)
     {
         // if "." then add to the dot counter
@@ -66,18 +79,32 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int index)
             // update "." count
             dots++;
         }
+    
         if(char_count == 1)
         {
+
             prev = character;
+            // check if directory type 
             if(type == 'd')
             {
                 printf("This is a directory! %c\n", character);
+                
                 //flag for in directory
                 inDir = 1;
+
             }
             else
             {
                 printf("Add char: %c\n", character);
+                // if dir flag is triggered, and count >= 3 (to access directories) , and valid iNode value from iNode list
+                if(inDir == 1 && nodeIdx != 0 && nameCount >= 3){
+                    //start appending to the name of the inode 
+                    iNodeList[nodeIdx].name[nameIndex] = character;
+                    nameIndex++;
+                   // printf("nodeIdx: %d nameIndex: %d ",nodeIdx, nameIndex);
+                }
+                // increment count of name , helps determine validity of if statement 
+                nameCount++;
             }
         }
         else
@@ -85,18 +112,41 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int index)
             curr = character;
             if(prev == 0 && curr != 0)
             {
+                // if printable char that is not "."
                 if(!isprint(curr) && curr != 46)
                 {
                     printf("INODE num: %d\n", character);
+                    nameIndex = 0;
+                    // if more than 2 dots
                     if(dots > 2){
                         // parent assigned value
                         (iNodeList)[character].parentInode = index;
                     }
+                    // start processing inode index after 3 chars have been read (".")
+                    if(nameCount >= 3){
+                        // node index for accessing node array is assigned
+                        // need to turn char into int
+                        nodeIdx = (int)character;
+                       // printf("nodeIdx 2: %d", nodeIdx);
+
+                    }
 
                 }
+
                 else
                 {
                     printf("Add char: %c\n", character);
+                    //if in dir, node idx is valid, and >= to 3 chars (".")
+                    if(inDir == 1 && nodeIdx != 0 && nameCount >= 3){
+                        // add char to name of respected inode in respected name index
+                        iNodeList[nodeIdx].name[nameIndex] = character;
+                        // increment name idx
+                        nameIndex++;
+                        //printf("nodeIdx: %d nameIndex: %d ",nodeIdx, nameIndex);
+
+                    }
+                    // increment name count helps with if statements to determine validity
+                    nameCount++;
                 }
             }
             else if(prev != 0 && curr != 0)
@@ -104,6 +154,18 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int index)
                 if(isprint(curr))
                 {
                     printf("Add char: %c\n", character);
+                    //iNodeList[index].name[nameIndex++] = character;
+                    // if in dir and valid inode accessed from array and chars are >= 3 (to bypass ".")
+                    if(inDir == 1 && nodeIdx != 0 && nameCount >= 3){
+                        // assign char to respected inode in array and respected idx in name
+                        iNodeList[nodeIdx].name[nameIndex] = character;
+                        // increment the name index 
+                        nameIndex++;
+                        //printf("nodeIdx: %d nameIndex: %d ",nodeIdx, nameIndex);
+                    }
+                    // increment count, helps with if statements to determine validity
+                    nameCount++;
+
                 }
             }
             else if(prev != 0 && curr == 0)
@@ -210,7 +272,8 @@ void loadInodesList(char *filename, Inode *iNodeList, size_t *iNodeCount)
         printf("%c", '\n');
     }
 
-
+    // for loop updates the types and inode #s from typelist and inodeNumList 
+    // inode list that holds an array of inodes is being altered 
     for(size_t i = 0; i < index; i++){
         iNodeList[i].type = typeList[i];
         iNodeList[i].inode = inodeNumList[i];
@@ -238,45 +301,27 @@ int main(int argc, char* argv[]){
         printf("invalid directory\n");
         exit(1);
     }
-    Inode dummy = {-1,0,'\0',"dummy"};
-    Inode iNodeList[1024] = {dummy}; // pointer to this in params
-    size_t inodeCount = 0;
-    uint32_t currentInode = 0;
-
-
-
 
     //send in # of total inodes in use
     //create inode array of 1024
-   
+    //Inode dummy = {-1,0,'\0',"dummy"};
+    Inode iNodeList[1024];
+    size_t inodeCount = 0;
+    uint32_t currentInode = 0;
 
-
-    //traverse
-
-
+    // change to specified dir
     chdir(argv[1]);
     closedir(directory);
-    //new array, initialize vals
-
-
-    //DIR *directory;
-    //directory = opendir(argv[1]);
-    // make an if else for if it is null
-
-    //pointers to vals
-    // Inode *list = iNodeList;
-    // int *icnt = inodeCount;
-
 
     // load inodes into list
-    // maybe update load inode list
     loadInodesList("inodes_list", iNodeList, &inodeCount);
     printf("Inode Count: %zu\n", inodeCount);
+    // for loop to print info
     for(int i =0; i<inodeCount;i++){
-        printf("Inode: %d, Type: %c, Parent: %d \n",iNodeList[i].inode,iNodeList[i].type, iNodeList[i].parentInode);
+        printf("Inode: %d, Type: %c, Name: %s, Parent: %d \n",iNodeList[i].inode,iNodeList[i].type, iNodeList[i].name, iNodeList[i].parentInode);
     }
 
-
+    // commands 
     char fname[50];
     while(1){
      printf("> ");
@@ -297,6 +342,7 @@ int main(int argc, char* argv[]){
          char *dir = strtok(NULL, " \n");
          if(dir != NULL){
              // cd logic
+             changeDirectory(dir, inodeCount,iNodeList, &currentInode);
          }
      } else if(strcmp(command, "mkdir") == 0){
          char *dir = strtok(NULL," \n");
@@ -320,22 +366,6 @@ int main(int argc, char* argv[]){
 
 
     return 0;
-
-
-
-
- 
-    // check if directory invalid
-    // struct stat dir_stat;
-    // // if there is issue getting info from directory
-    // // or
-    // // if file path is not a directory
-    // if(stat(argv[1], &dir_stat) == -1 || !S_ISDIR(dir_stat.st_mode)){
-    //     printf("error, specified directory not valid\n");
-    //     exit(1);
-    // }
-    // Read inodes_list file and load fs data
-
 
 }
 

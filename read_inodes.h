@@ -17,7 +17,7 @@ typedef struct
 } Inode;
 
 void listContents(uint32_t currentInode, Inode *iNodeList, int iNodeCount);
-void changeDirectory(const char* name);
+void changeDirectory(const char* name, size_t iNodeCount, Inode *iNodeList, uint32_t *currentInode);
 void createDirectory(const char *name);
 void createFile(const char *name);
 
