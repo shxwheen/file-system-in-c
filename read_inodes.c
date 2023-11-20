@@ -62,7 +62,7 @@ void loadInode(uint32_t inode, Inode *iNodeList, char type, int index)
     int dots = 0;
     //char nameBuffer[32];
 
-    // index used for storing inodes to respected name
+    // index used for accessing element of inode name
     int nameIndex = 0;
     // index for inode being iterated thru in the array of Inodes
     int nodeIdx = 0;
